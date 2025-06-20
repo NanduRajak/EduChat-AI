@@ -13,6 +13,7 @@ export default function ChatInterface() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -119,6 +120,10 @@ export default function ChatInterface() {
     }
   };
 
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
   const handleSubmit = async (message: string, images?: string[]) => {
     if (!message && !images?.length) return;
 
@@ -195,7 +200,7 @@ export default function ChatInterface() {
   }, [messages, currentChatId]);
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className={`flex flex-col h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -205,21 +210,22 @@ export default function ChatInterface() {
         onNewChat={handleNewChat}
         onSelectChat={handleSelectChat}
         onDeleteChat={handleDeleteChat}
+        isDarkMode={isDarkMode}
       />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="h-14 border-b border-gray-200 bg-white/80 backdrop-blur-sm flex items-center px-4">
+        <header className={`h-14 border-b backdrop-blur-sm flex items-center px-4 transition-colors duration-300 ${isDarkMode ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-white/80'}`}>
           <div className="flex items-center justify-between w-full">
             {/* Left - Sidebar Toggle & Brand */}
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100 transition-colors"
+                className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'}`}
                 title="Open sidebar"
               >
-                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
@@ -229,23 +235,45 @@ export default function ChatInterface() {
                   <span className="text-white text-xs font-semibold">AI</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-medium text-gray-900 text-sm leading-none">EduChat</span>
-                  <span className="text-xs text-gray-500 leading-none">Your study companion</span>
+                  <span className={`font-medium text-sm leading-none transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>EduChat</span>
+                  <span className={`text-xs leading-none transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Your study companion</span>
                 </div>
               </div>
             </div>
 
-            {/* Right - Status */}
-            <div className="w-8 h-8 flex items-center justify-center">
-              {isLoading && (
-                <div className="w-4 h-4 border-2 border-gray-300 border-t-rose-500 rounded-full animate-spin" />
-              )}
+            {/* Right - Theme Toggle & Status */}
+            <div className="flex items-center gap-2">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${isDarkMode ? 'bg-rose-500 hover:bg-rose-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full shadow-md transform transition-all duration-300 flex items-center justify-center ${isDarkMode ? 'translate-x-6 bg-gray-800' : 'translate-x-0 bg-white'}`}>
+                  {isDarkMode ? (
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+
+              {/* Loading Status */}
+              <div className="w-8 h-8 flex items-center justify-center">
+                {isLoading && (
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-rose-500 rounded-full animate-spin" />
+                )}
+              </div>
             </div>
           </div>
         </header>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto bg-white">
+        <div className={`flex-1 overflow-y-auto transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
           <div className="max-w-4xl mx-auto">
             {messages.length === 0 ? (
               // Empty State
@@ -266,10 +294,10 @@ export default function ChatInterface() {
 
                 {/* Content */}
                 <div className="text-center max-w-lg">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                  <h1 className={`text-3xl font-bold mb-3 transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                     Welcome to EduChat
                   </h1>
-                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                  <p className={`text-lg mb-8 leading-relaxed transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     Your intelligent study companion powered by AI. Ask questions, solve problems, or upload images for instant analysis.
                   </p>
                 </div>
@@ -313,12 +341,12 @@ export default function ChatInterface() {
                     <button
                       key={action.text}
                       onClick={() => handleSubmit(action.text)}
-                      className="group flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-rose-300 hover:bg-rose-50/50 transition-all duration-200 text-left hover:shadow-sm"
+                      className={`group flex items-center gap-3 p-4 border rounded-xl hover:border-rose-300 hover:shadow-sm transition-all duration-200 text-left ${isDarkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700/50' : 'bg-white border-gray-200 hover:bg-rose-50/50'}`}
                     >
-                      <div className="text-gray-500 group-hover:text-rose-600 transition-colors">
+                      <div className={`group-hover:text-rose-500 transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         {action.icon}
                       </div>
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-rose-700">
+                      <span className={`text-sm font-medium group-hover:text-rose-600 transition-colors ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                         {action.text}
                       </span>
                     </button>
@@ -326,11 +354,11 @@ export default function ChatInterface() {
                 </div>
 
                 {/* Footer hint */}
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <div className={`flex items-center gap-2 text-xs transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 003.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
                   </svg>
-                  <span>Start by selecting an option above or type your question below</span>
+                  <span>Start typing your questions...</span>
                 </div>
               </div>
             ) : (
@@ -340,9 +368,11 @@ export default function ChatInterface() {
                   <Message key={message.id} message={message} />
                 ))}
                 {isLoading && (
-                  <div className="flex items-start gap-3 px-4 py-4">
-                    <div className="w-8 h-8 bg-rose-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-semibold">AI</span>
+                  <div className={`flex items-start gap-3 px-4 py-6 transition-colors ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50/50'}`}>
+                    <div className="w-8 h-8 bg-gradient-to-br from-rose-500 to-rose-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
                     </div>
                     <div className="flex items-center gap-1 pt-2">
                       <div className="flex gap-1">
@@ -364,6 +394,7 @@ export default function ChatInterface() {
           onSubmit={handleSubmit}
           isLoading={isLoading}
           placeholder="Ask me anything about your studies..."
+          isDarkMode={isDarkMode}
         />
       </div>
     </div>
