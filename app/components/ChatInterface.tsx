@@ -425,18 +425,25 @@ export default function ChatInterface() {
                       )
                     },
                   ].map((action) => (
-                    <button
+                    <div
                       key={action.text}
-                      onClick={() => handleSubmit(action.text)}
-                      className={`group flex items-center gap-3 p-4 border rounded-xl hover:border-rose-300 hover:shadow-sm transition-all duration-200 text-left ${isDarkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700/50' : 'bg-white border-gray-200 hover:bg-rose-50/50'}`}
+                      className={`group flex items-center gap-3 p-4 border rounded-xl transition-all duration-300 text-left cursor-default ${
+                        isDarkMode 
+                          ? 'bg-gray-800/50 border-gray-600 hover:border-rose-400/50 hover:bg-gray-700/30 hover:shadow-lg hover:shadow-rose-500/10' 
+                          : 'bg-white/80 border-gray-200 hover:border-rose-300 hover:bg-rose-50/30 hover:shadow-lg hover:shadow-rose-200/50'
+                      }`}
                     >
-                      <div className={`group-hover:text-rose-500 transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <div className={`group-hover:text-rose-500 group-hover:scale-110 transition-all duration-300 ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
                         {action.icon}
                       </div>
-                      <span className={`text-sm font-medium group-hover:text-rose-600 transition-colors ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-medium group-hover:text-rose-600 transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                      }`}>
                         {action.text}
                       </span>
-                    </button>
+                    </div>
                   ))}
                 </div>
 

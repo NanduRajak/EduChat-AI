@@ -11,7 +11,8 @@ const groqClient = new Groq({
 // Models configuration
 export const MODELS = {
   TEXT: 'llama-3.1-8b-instant', // Fast text model via Vercel AI SDK
-  VISION: 'llama-3.2-90b-vision-preview', // Vision model via raw Groq SDK
+  VISION: 'llama-3.2-90b-vision-preview', // Primary vision model via raw Groq SDK
+  VISION_FALLBACK: 'llama-3.2-11b-vision-preview', // Fallback vision model
   LARGE: 'llama-3.1-70b-versatile', // Large model for complex tasks
 } as const;
 
@@ -73,39 +74,55 @@ export async function processImageWithGroq(
   imageData: string,
   userPrompt: string = "What do you see in this image? Please provide a detailed description and analysis."
 ): Promise<string> {
-  try {
-    const response = await groqClient.chat.completions.create({
-      model: MODELS.VISION,
-      messages: [
-        {
-          role: "system",
-          content: SYSTEM_PROMPTS.GENERAL
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: userPrompt
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: imageData // Should be in format: data:image/jpeg;base64,{base64}
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
-    });
+  const visionModels = [
+    MODELS.VISION,
+    MODELS.VISION_FALLBACK,
+    'llama-3.1-8b-vision-preview'
+  ];
 
-    return response.choices[0]?.message?.content || "I couldn't analyze the image.";
-  } catch (error) {
-    console.error('Vision processing error:', error);
-    throw new Error('Failed to process image with Groq vision model');
+  for (const model of visionModels) {
+    try {
+      console.log(`Attempting image analysis with model: ${model}`);
+      const response = await groqClient.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: "system",
+            content: SYSTEM_PROMPTS.GENERAL
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: userPrompt
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageData // Should be in format: data:image/jpeg;base64,{base64}
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1500,
+        temperature: 0.3,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (content) {
+        console.log(`Image analysis successful with model: ${model}`);
+        return content;
+      }
+    } catch (error) {
+      console.error(`Vision processing error with model ${model}:`, error);
+      // Continue to next model if this one fails
+      continue;
+    }
   }
+  
+  throw new Error('All vision models failed to process the image');
 }
 
 // Text completion function using raw Groq SDK (fallback)

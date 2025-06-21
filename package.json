@@ -25,6 +25,7 @@
     "ai": "^4.3.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^16.5.0",
     "groq-sdk": "^0.25.0",
     "lucide-react": "^0.522.0",
     "next": "15.3.4",
