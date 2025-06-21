@@ -27,53 +27,105 @@ export async function POST(req: NextRequest) {
     
     // Handle image messages with raw Groq SDK
     if (hasImages && lastMessage.images && lastMessage.images.length > 0) {
-      const imageMessages = lastMessage.images.map((image: string) => ({
-        type: "image_url",
-        image_url: {
-          url: image // Should be in format: data:image/jpeg;base64,{base64}
-        }
-      }));
-
-      const completion = await groqClient.chat.completions.create({
-        model: "llama-3.2-11b-vision-preview", // Free vision model
-        messages: [
-          {
-            role: "system",
-            content: "You are an educational AI assistant. Analyze images and help students understand concepts, solve problems, and learn effectively. Be clear, encouraging, and educational in your responses."
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: lastMessage.content || "Please analyze this image and help me understand it."
-              },
-              ...imageMessages
-            ]
+      try {
+        const imageMessages = lastMessage.images.map((image: string) => ({
+          type: "image_url",
+          image_url: {
+            url: image // Should be in format: data:image/jpeg;base64,{base64}
           }
-        ],
-        max_tokens: 1000,
-        temperature: 0.7,
-      });
+        }));
 
-      return NextResponse.json({
-        content: completion.choices[0]?.message?.content || "I couldn't analyze the image. Please try again.",
-        finished: true
-      });
+        // Try different vision models in order of preference
+        const visionModels = [
+          "llama-3.2-11b-vision-preview",
+          "llama-3.1-8b-instant", // Fallback to text model if vision not available
+        ];
+
+        let completion = null;
+        let modelUsed = null;
+
+        for (const model of visionModels) {
+          try {
+            if (model.includes('vision')) {
+              // Vision model
+              completion = await groqClient.chat.completions.create({
+                model: model,
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are an educational AI assistant. Analyze images and help students understand concepts, solve problems, and learn effectively. Be clear, encouraging, and educational in your responses."
+                  },
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: "text",
+                        text: lastMessage.content || "Please analyze this image and help me understand it."
+                      },
+                      ...imageMessages
+                    ]
+                  }
+                ],
+                max_tokens: 1000,
+                temperature: 0.7,
+              });
+            } else {
+              // Text model fallback
+              completion = await groqClient.chat.completions.create({
+                model: model,
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are an educational AI assistant. The user has uploaded an image but I cannot analyze it directly. Please help them with their question in a helpful and educational way."
+                  },
+                  {
+                    role: "user",
+                    content: lastMessage.content || "I've uploaded an image but you can't see it. Can you help me with my question?"
+                  }
+                ],
+                max_tokens: 1000,
+                temperature: 0.7,
+              });
+            }
+            modelUsed = model;
+            break;
+          } catch (modelError) {
+            console.log(`Model ${model} failed:`, modelError instanceof Error ? modelError.message : 'Unknown error');
+            continue;
+          }
+        }
+
+        if (completion) {
+          return NextResponse.json({
+            content: completion.choices[0]?.message?.content || "I couldn't analyze the image. Please try again.",
+            finished: true
+          });
+        } else {
+          throw new Error('No available models for image processing');
+        }
+
+      } catch (visionError) {
+        console.error('Vision model error:', visionError);
+        // Fallback to text-only response when vision model is not available
+        return NextResponse.json({
+          content: "I see you've uploaded an image! While I can't analyze images directly right now, I'd be happy to help you with any questions you have. Please describe what you'd like to know, and I'll do my best to assist you with your learning.",
+          finished: true
+        });
+      }
     }
 
     // Handle text-only messages with Vercel AI SDK
     const result = await streamText({
-      model: groq('llama-3.1-8b-instant'), // Free text model
-      system: `You are an educational AI assistant specialized in helping students learn. You can:
-- Explain complex concepts in simple terms
-- Solve math and science problems step-by-step
-- Provide study tips and learning strategies
-- Generate practice questions and quizzes
-- Help with homework and assignments
-- Offer encouragement and motivation
+      model: groq('llama-3.1-8b-instant'),
+      system: `You are a helpful educational AI assistant. Keep your responses simple, clear, and easy to read. 
 
-Always be patient, clear, and encouraging in your responses. Break down complex topics into manageable parts.`,
+- Use plain text without markdown formatting
+- Avoid excessive asterisks, backticks, or special characters
+- Write in a conversational, friendly tone
+- Keep responses concise but informative
+- Use simple line breaks for readability
+
+Focus on being helpful and educational while keeping the format clean and simple.`,
       messages: messages.map((msg: any) => ({
         role: msg.role,
         content: msg.content
@@ -82,16 +134,8 @@ Always be patient, clear, and encouraging in your responses. Break down complex 
       temperature: 0.7,
     });
 
-    // Convert stream to simple response for now
-    const chunks = [];
-    for await (const chunk of result.textStream) {
-      chunks.push(chunk);
-    }
-
-    return NextResponse.json({
-      content: chunks.join(''),
-      finished: true
-    });
+    // Return streaming response properly
+    return result.toDataStreamResponse();
     
   } catch (error) {
     console.error('Chat API error:', error);
@@ -108,6 +152,12 @@ Always be patient, clear, and encouraging in your responses. Break down complex 
         return NextResponse.json(
           { error: 'Rate limit reached. Please try again in a moment.' },
           { status: 429 }
+        );
+      }
+      if (error.message.includes('model')) {
+        return NextResponse.json(
+          { error: 'Model not available. Please try again.' },
+          { status: 400 }
         );
       }
     }

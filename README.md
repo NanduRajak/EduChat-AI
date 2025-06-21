@@ -1,194 +1,129 @@
-# EduChat AI - Multimodal Ed-Tech Chatbot
+# EduChat - AI Educational Assistant
 
-A production-ready, multimodal AI chatbot designed specifically for educational purposes. Built with Next.js 14, it supports both text and image inputs, implements advanced AI capabilities through Groq, and provides a clean, responsive interface.
+A modern, intelligent educational chatbot powered by Groq AI that helps students learn, solve problems, and understand complex concepts.
 
-## 🚀 Features
+## Features
 
-- **Multimodal Support**: Handle both text and image inputs
-- **Educational Focus**: Specialized prompts and responses for learning
-- **Modern UI**: Clean, responsive design with dark/light mode support  
-- **Real-time Streaming**: Fast, streaming responses for better UX
-- **Image Analysis**: Advanced vision capabilities for educational content
-- **Mobile Responsive**: Works seamlessly across all devices
-- **Type Safe**: Full TypeScript implementation
-- **Production Ready**: Optimized for deployment on Vercel
+- 🤖 **AI-Powered Learning**: Get instant help with homework, explanations, and study guidance
+- 🖼️ **Image Analysis**: Upload images for AI analysis and explanation
+- 💬 **Real-time Chat**: Stream responses for a smooth conversation experience
+- 🌙 **Dark Mode**: Toggle between light and dark themes
+- 📱 **Responsive Design**: Works perfectly on desktop and mobile devices
+- 💾 **Chat History**: Save and manage your conversation sessions
 
-## 🛠️ Technology Stack
+## Quick Start
 
-- **Frontend**: Next.js 14 with App Router
-- **UI Framework**: Tailwind CSS + shadcn/ui components
-- **AI Provider**: Groq API (llama models)
-- **State Management**: React hooks (useState, useChat from ai/react)
-- **Styling**: Tailwind CSS with custom design system
-- **Icons**: Lucide React
-- **Theme**: next-themes for dark/light mode
-- **Type Safety**: TypeScript throughout
+### 1. Clone the repository
+```bash
+git clone <your-repo-url>
+cd edutech-chatbot-new
+```
 
-## 📋 Prerequisites
+### 2. Install dependencies
+```bash
+npm install
+```
 
-- Node.js 18+ and npm/yarn
-- Groq API key (free at [console.groq.com](https://console.groq.com))
+### 3. Set up your Groq API key
 
-## ⚡ Quick Start
+Create a `.env.local` file in the root directory and add your Groq API key:
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd edutech-chatbot-new
-   ```
+```bash
+# .env.local
+GROQ_API_KEY=your_actual_groq_api_key_here
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+**Get your free Groq API key:**
+1. Visit [https://console.groq.com/keys](https://console.groq.com/keys)
+2. Sign up for a free account
+3. Create a new API key
+4. Copy the key and paste it in your `.env.local` file
 
-3. **Set up environment variables**
-   Create a `.env.local` file in the root directory:
-   ```env
-   GROQ_API_KEY=your_groq_api_key
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   ```
+### 4. Run the development server
+```bash
+npm run dev
+```
 
-4. **Run the development server**
-   ```bash
-   npm run dev
-   ```
+### 5. Open your browser
+Navigate to [http://localhost:3000](http://localhost:3000)
 
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-## 🎯 Usage Examples
+## Usage
 
 ### Text Conversations
-- Ask questions about any academic subject
-- Get step-by-step problem solutions
-- Request explanations of complex concepts
-- Generate study materials and quizzes
+- Simply type your questions or problems
+- Get instant AI-powered responses
+- Ask for explanations, help with homework, or study tips
 
 ### Image Analysis
-- Upload photos of math problems for solutions
-- Analyze scientific diagrams and charts
-- Get explanations of visual content
-- Process educational materials from textbooks
+- Click the paperclip icon or drag & drop images
+- Upload images up to 10MB
+- Get AI analysis and explanations of the content
 
-### Educational Contexts
-- **Math**: Algebra, calculus, geometry problems
-- **Science**: Physics, chemistry, biology concepts
-- **Programming**: Code examples and debugging
-- **General**: History, literature, and more
+### Chat Management
+- Use the sidebar to manage chat sessions
+- Create new conversations
+- Access your chat history
+- Delete old conversations
 
-## 🏗️ Project Structure
+## Troubleshooting
 
+### API Key Issues
+If you see "Please add your free Groq API key" error:
+1. Make sure you have a `.env.local` file in the root directory
+2. Verify your API key is correct
+3. Restart the development server after adding the key
+
+### Model Issues
+If you encounter model-related errors:
+- The app uses `llama-3.1-8b-instant` for text and `llama-3.2-11b-vision-preview` for images
+- These are free models available on Groq
+- Make sure your account has access to these models
+
+### Image Upload Issues
+- Supported formats: JPEG, PNG, GIF, WebP
+- Maximum file size: 10MB
+- Make sure images are clear and readable
+
+## Technology Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **AI**: Groq AI (Llama models)
+- **UI Components**: Radix UI
+- **Icons**: Lucide React
+
+## Development
+
+### Project Structure
 ```
-edutech-chatbot-new/
-├── app/                          # Next.js app directory
-│   ├── api/                      # API routes
-│   │   ├── chat/route.ts        # Main chat endpoint
-│   │   └── upload/route.ts      # File upload handler
-│   ├── components/              # React components
-│   │   ├── ui/                  # shadcn/ui components
-│   │   ├── ChatInterface.tsx    # Main chat component
-│   │   ├── MessageList.tsx      # Message display
-│   │   └── Header.tsx           # App header
-│   ├── lib/                     # Utility libraries
-│   │   ├── ai-config.ts         # AI configuration
-│   │   └── utils.ts             # Helper functions
-│   ├── types/                   # TypeScript definitions
-│   └── layout.tsx               # Root layout
-├── src/app/                     # Additional app files
-│   ├── globals.css              # Global styles
-│   └── layout.tsx               # Main layout
-├── public/                      # Static assets
-└── package.json                 # Dependencies
-```
-
-## 🔧 Configuration
-
-### AI Models
-The app uses different Groq models for different purposes:
-- **Text**: `llama-3.1-8b-instant` (fast responses)
-- **Vision**: `llama-3.2-90b-vision-preview` (image analysis)
-- **Complex**: `llama-3.1-70b-versatile` (advanced reasoning)
-
-### Customization
-Modify `app/lib/ai-config.ts` to:
-- Adjust system prompts for different subjects
-- Change model parameters (temperature, max tokens)
-- Add new educational contexts
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy automatically on push
-
-### Environment Variables for Production
-```env
-GROQ_API_KEY=your_groq_api_key
-NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+app/
+├── api/           # API routes
+├── components/    # React components
+├── lib/          # Utility functions
+└── types/        # TypeScript types
 ```
 
-## 🎨 UI Components
+### Available Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-The app uses a comprehensive set of UI components:
-- `Button` - Interactive buttons with variants
-- `Card` - Content containers
-- `ScrollArea` - Scrollable content areas
-- `Textarea` - Multi-line text input
-- Custom message components with markdown support
-
-## 🔍 API Endpoints
-
-### POST /api/chat
-Main chat endpoint supporting both text and image inputs.
-
-**Request:**
-```json
-{
-  "messages": [...],
-  "hasImages": boolean
-}
-```
-
-**Response:** Streaming text or JSON with image analysis
-
-### POST /api/upload
-File upload endpoint for image processing.
-
-**Request:** FormData with image file
-**Response:** Base64 encoded image data
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is open source and available under the [MIT License](LICENSE).
 
-## 🆘 Support
+## Support
 
-If you encounter any issues:
-1. Check the environment variables are set correctly
-2. Verify your Groq API key is valid
-3. Review the console for error messages
-4. Open an issue on GitHub with detailed information
-
-## 🔮 Future Enhancements
-
-- [ ] RAG implementation with vector database
-- [ ] Tool calling system (calculator, code executor)
-- [ ] Study session persistence
-- [ ] Multi-language support
-- [ ] Voice input/output
-- [ ] Advanced analytics
-
----
-
-Built with ❤️ for education and learning
+If you encounter any issues or have questions:
+1. Check the troubleshooting section above
+2. Review the console for error messages
+3. Make sure your Groq API key is valid and has sufficient credits

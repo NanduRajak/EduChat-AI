@@ -14,6 +14,7 @@ export default function ChatInterface() {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -124,7 +125,7 @@ export default function ChatInterface() {
     setIsDarkMode(!isDarkMode);
   };
 
-  const handleSubmit = async (message: string, images?: string[]) => {
+  const handleSubmit = async (message: string, images?: string[], useWebSearch?: boolean) => {
     if (!message && !images?.length) return;
 
     // Create new chat if none exists
@@ -144,6 +145,17 @@ export default function ChatInterface() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
+    // Create AI message placeholder
+    const aiMessageId = (Date.now() + 1).toString();
+    const aiMessage: MessageType = {
+      id: aiMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, aiMessage]);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -153,36 +165,86 @@ export default function ChatInterface() {
         body: JSON.stringify({
           messages: [...messages, userMessage],
           hasImages: images && images.length > 0,
+          useWebSearch: useWebSearch,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to get response');
       }
 
+      // Check if response is streaming (for text) or JSON (for images)
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType?.includes('text/plain')) {
+        // Handle streaming response for text
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedContent = '';
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('0:')) {
+                // Extract the text content from the streaming format
+                const textContent = line.slice(2).replace(/"/g, '');
+                accumulatedContent += textContent;
+                
+                // Clean up the content - remove raw formatting characters
+                const cleanedContent = accumulatedContent
+                  .replace(/\\n/g, '\n')  // Convert \n to actual newlines
+                  .replace(/\*\*/g, '')   // Remove markdown bold markers
+                  .replace(/\*/g, '')     // Remove single asterisks
+                  .replace(/`/g, '')      // Remove backticks
+                  .replace(/#{1,6}\s/g, '') // Remove markdown headers
+                  .trim();                // Remove extra whitespace
+                
+                setMessages(prev => 
+                  prev.map(msg => 
+                    msg.id === aiMessageId 
+                      ? { ...msg, content: cleanedContent }
+                      : msg
+                  )
+                );
+              } else if (line.startsWith('e:') || line.startsWith('d:')) {
+                // End of stream
+                break;
+              }
+            }
+          }
+        }
+      } else {
+        // Handle JSON response for images
       const data = await response.json();
       
       if (data.error) {
         throw new Error(data.error);
       }
 
-      const aiMessage: MessageType = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.content,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === aiMessageId 
+              ? { ...msg, content: data.content }
+              : msg
+          )
+        );
+      }
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMessage: MessageType = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === aiMessageId 
+            ? { ...msg, content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.' }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -365,7 +427,108 @@ export default function ChatInterface() {
               // Messages
               <div className="py-4">
                 {messages.map((message) => (
-                  <Message key={message.id} message={message} />
+                  <div
+                    key={message.id}
+                    className={`mb-4 flex items-end ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {message.role === 'assistant' && (
+                      <div className="flex items-end mr-3 flex-shrink-0">
+                        {/* Enhanced Bot Icon SVG */}
+                        <div className={`relative w-10 h-10 rounded-full shadow-lg flex items-center justify-center border-2 ${
+                          isDarkMode 
+                            ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 border-gray-600 shadow-blue-500/20' 
+                            : 'bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 border-white shadow-lg'
+                        }`}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="4" y="6" width="16" height="12" rx="2" fill="white" fillOpacity="0.95" />
+                            <circle cx="8" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                            <circle cx="16" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                            <rect x="10" y="13" width="4" height="2" rx="1" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                            <path d="M8 4L10 6H14L16 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                            {/* Glow effect for dark mode */}
+                            {isDarkMode && (
+                              <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1" />
+                            )}
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                    <div
+                      className={`rounded-2xl px-4 py-3 max-w-[75%] shadow-md break-words relative group ${
+                        message.role === 'user'
+                          ? isDarkMode
+                            ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-rose-500/20'
+                            : 'bg-gradient-to-r from-rose-100 to-rose-50 text-rose-900 shadow-lg'
+                          : isDarkMode
+                            ? 'bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-gray-500/20'
+                            : 'bg-gradient-to-r from-gray-100 to-gray-50 text-gray-900 shadow-lg'
+                      }`}
+                    >
+                      {message.content}
+                      
+                      {/* Copy Icon for AI responses */}
+                      {message.role === 'assistant' && (
+                        <button
+                          onClick={(event) => {
+                            navigator.clipboard.writeText(message.content);
+                            setCopiedMessageId(message.id);
+                            setTimeout(() => {
+                              setCopiedMessageId(null);
+                            }, 1000);
+                          }}
+                          className={`absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-110 ${
+                            copiedMessageId === message.id
+                              ? isDarkMode
+                                ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/30'
+                                : 'bg-rose-500 text-white shadow-lg shadow-rose-500/40'
+                              : isDarkMode
+                                ? 'bg-white hover:bg-gray-100 text-gray-600 shadow-lg'
+                                : 'bg-white hover:bg-gray-50 text-gray-600 shadow-lg'
+                          }`}
+                          title="Copy message"
+                        >
+                          <svg 
+                            width="16" 
+                            height="16" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="transition-transform duration-200"
+                          >
+                            <path 
+                              d="M8 4V2C8 1.44772 8.44772 1 9 1H19C19.5523 1 20 1.44772 20 2V16C20 16.5523 19.5523 17 19 17H17V20C17 20.5523 16.5523 21 16 21H4C3.44772 21 3 20.5523 3 20V6C3 5.44772 3.44772 5 4 5H8V4Z" 
+                              stroke="currentColor" 
+                              strokeWidth="2" 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    {message.role === 'user' && (
+                      <div className="flex items-end ml-3 flex-shrink-0">
+                        {/* Enhanced Premium User Icon SVG */}
+                        <div className="relative w-10 h-10 rounded-full shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-yellow-400 shadow-lg"></div>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10">
+                            <circle cx="12" cy="12" r="10" fill="url(#userGradient)" />
+                            <ellipse cx="12" cy="10.5" rx="4" ry="4.5" fill="#fff" fillOpacity="0.95" />
+                            <ellipse cx="12" cy="18" rx="6.5" ry="3.5" fill="#fff" fillOpacity="0.6" />
+                            {/* Enhanced glow effect */}
+                            <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(244, 63, 94, 0.3)" strokeWidth="1" />
+                            <defs>
+                              <linearGradient id="userGradient" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                                <stop stopColor="#f43f5e" />
+                                <stop offset="0.5" stopColor="#ec4899" />
+                                <stop offset="1" stopColor="#fbbf24" />
+                              </linearGradient>
+                            </defs>
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
                 {isLoading && (
                   <div className={`flex items-start gap-3 px-4 py-6 transition-colors ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50/50'}`}>

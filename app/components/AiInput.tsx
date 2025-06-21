@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Send, Paperclip, X, Upload } from 'lucide-react';
+import { Send, Paperclip, X, Upload, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface AiInputProps {
-  onSubmit: (message: string, images?: string[]) => void;
+  onSubmit: (message: string, images?: string[], useWebSearch?: boolean) => void;
   isLoading?: boolean;
   placeholder?: string;
   isDarkMode?: boolean;
@@ -15,6 +15,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,10 +23,10 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
     e.preventDefault();
     if (!input.trim() && images.length === 0) return;
     
-    onSubmit(input.trim(), images.length > 0 ? images : undefined);
+    onSubmit(input.trim(), images.length > 0 ? images : undefined, webSearchEnabled);
     setInput('');
     setImages([]);
-  }, [input, images, onSubmit]);
+  }, [input, images, webSearchEnabled, onSubmit]);
 
   const handleImageUpload = useCallback((files: FileList) => {
     Array.from(files).forEach(file => {
@@ -111,7 +112,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               disabled={isLoading}
-              className={`w-full min-h-[52px] max-h-32 px-4 py-3 pr-24 text-sm bg-transparent border-none outline-none resize-none transition-colors ${isDarkMode ? 'text-gray-100 placeholder:text-gray-400' : 'text-gray-900 placeholder:text-gray-500'}`}
+              className={`w-full min-h-[52px] max-h-32 px-4 py-3 pr-32 text-sm bg-transparent border-none outline-none resize-none transition-colors ${isDarkMode ? 'text-gray-100 placeholder:text-gray-400' : 'text-gray-900 placeholder:text-gray-500'}`}
               rows={1}
               style={{
                 height: 'auto',
@@ -135,11 +136,61 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                 className="hidden"
               />
               
+              {/* Web Search Toggle */}
+              <button
+                type="button"
+                onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                disabled={isLoading}
+                className={cn(
+                  "group relative p-2 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50",
+                  webSearchEnabled
+                    ? "bg-rose-500 text-white shadow-md hover:bg-rose-600 hover:shadow-lg"
+                    : isDarkMode
+                      ? "text-gray-400 hover:text-rose-400 hover:bg-gray-700/50"
+                      : "text-gray-500 hover:text-rose-500 hover:bg-rose-50"
+                )}
+                title={webSearchEnabled ? "Web search enabled - Get up-to-date information" : "Enable web search for current information"}
+              >
+                <div className="relative">
+                  <Globe className={cn(
+                    "w-4 h-4 transition-all duration-300",
+                    webSearchEnabled && "animate-pulse"
+                  )} />
+                  {webSearchEnabled && (
+                    <>
+                      {/* Animated rings */}
+                      <div className="absolute inset-0 rounded-full border-2 border-white/30 animate-ping" />
+                      <div className="absolute inset-0 rounded-full border border-white/20 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                    </>
+                  )}
+                </div>
+                
+                {/* Tooltip */}
+                <div className={cn(
+                  "absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs rounded-lg shadow-lg transition-all duration-200 pointer-events-none whitespace-nowrap z-10",
+                  "opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0",
+                  isDarkMode 
+                    ? "bg-gray-800 text-gray-100 border border-gray-600" 
+                    : "bg-white text-gray-800 border border-gray-200"
+                )}>
+                  {webSearchEnabled ? "Web search ON" : "Enable web search"}
+                  <div className={cn(
+                    "absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent",
+                    isDarkMode ? "border-t-gray-800" : "border-t-white"
+                  )} />
+                </div>
+              </button>
+              
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
-                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50"
+                className={cn(
+                  "p-2 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50",
+                  isDarkMode
+                    ? "text-rose-400 hover:text-rose-500 hover:bg-gray-700/50"
+                    : "text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                )}
               >
                 <Paperclip className="w-4 h-4" />
               </button>
@@ -148,10 +199,12 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                 type="submit"
                 disabled={isLoading || (!input.trim() && images.length === 0)}
                 className={cn(
-                  "p-2 rounded-lg transition-all",
+                  "p-2 rounded-lg transition-all duration-200 transform hover:scale-105",
                   (input.trim() || images.length > 0) && !isLoading
-                    ? "bg-rose-500 text-white hover:bg-rose-600"
-                    : "text-gray-400 cursor-not-allowed"
+                    ? "bg-rose-500 text-white hover:bg-rose-600 shadow-md hover:shadow-lg"
+                    : isDarkMode
+                      ? "text-gray-600 cursor-not-allowed"
+                      : "text-gray-400 cursor-not-allowed"
                 )}
               >
                 <Send className="w-4 h-4" />
@@ -170,9 +223,19 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
           </div>
         </form>
 
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          Press ⌘+Enter to send • Supports images up to 10MB
-        </p>
+        <div className="flex items-center justify-center gap-4 mt-2">
+          <p className={`text-xs transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Press ⌘+Enter to send • Supports images up to 10MB
+          </p>
+          {webSearchEnabled && (
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+              <span className={`text-xs font-medium transition-colors ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>
+                Web search enabled
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
