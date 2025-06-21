@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Send, Paperclip, X, Upload, Globe } from 'lucide-react';
+import { ArrowUp, Paperclip, X, Upload, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface AiInputProps {
@@ -199,15 +199,20 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                 type="submit"
                 disabled={isLoading || (!input.trim() && images.length === 0)}
                 className={cn(
-                  "p-2 rounded-lg transition-all duration-200 transform hover:scale-105",
+                  "p-2 rounded-lg transition-all duration-300 transform hover:scale-105",
                   (input.trim() || images.length > 0) && !isLoading
-                    ? "bg-rose-500 text-white hover:bg-rose-600 shadow-md hover:shadow-lg"
+                    ? "bg-rose-500 text-white hover:bg-rose-600 shadow-md hover:shadow-lg hover:-translate-y-0.5"
                     : isDarkMode
-                      ? "text-gray-600 cursor-not-allowed"
-                      : "text-gray-400 cursor-not-allowed"
+                      ? "text-gray-600 cursor-not-allowed opacity-0"
+                      : "text-gray-400 cursor-not-allowed opacity-0"
                 )}
+                style={{
+                  opacity: (input.trim() || images.length > 0) && !isLoading ? 1 : 0,
+                  transform: (input.trim() || images.length > 0) && !isLoading ? 'scale(1)' : 'scale(0.8)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
               >
-                <Send className="w-4 h-4" />
+                <ArrowUp className="w-4 h-4" />
               </button>
             </div>
 
