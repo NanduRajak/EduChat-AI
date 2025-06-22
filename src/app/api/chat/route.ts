@@ -3,7 +3,6 @@ import { streamText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
 import Groq from 'groq-sdk';
 
-// Initialize Groq clients
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
@@ -16,16 +15,28 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, hasImages, useWebSearch } = await req.json();
     
-    // Check if GROQ_API_KEY exists
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'your_groq_api_key_here') {
       return NextResponse.json({
         error: 'Please add your free Groq API key to .env.local file. Get it from: https://console.groq.com/keys'
       }, { status: 400 });
     }
 
+    try {
+      await groqClient.models.list();
+    } catch (error) {
+      console.error('Groq API key validation failed:', error);
+      if (error instanceof Groq.APIError && error.status === 401) {
+          return NextResponse.json({
+          error: 'Your Groq API key is invalid or has been revoked. Please check your key in the Vercel project settings and ensure it has the correct permissions.'
+        }, { status: 401 });
+      }
+      return NextResponse.json({
+        error: 'Could not connect to the AI service. Please try again later.'
+      }, { status: 500 });
+    }
+
     const lastMessage = messages[messages.length - 1];
     
-    // Perform web search if enabled
     let webSearchResults = [];
     if (useWebSearch && lastMessage.content) {
       try {
