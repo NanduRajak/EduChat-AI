@@ -172,7 +172,11 @@ export default function ChatInterface() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to get response');
+        let errorMessage = errorData.error || 'Failed to get response from server.';
+        if (response.status === 401 || (errorData.error && errorData.error.includes('API key'))) {
+          errorMessage = 'Authentication failed. This is likely due to an invalid API key. Please check your environment variables in your Vercel project settings.';
+        }
+        throw new Error(errorMessage);
       }
 
       // Check if response is streaming (for text) or JSON (for images)
@@ -262,16 +266,26 @@ export default function ChatInterface() {
         );
       }
     } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === aiMessageId 
-            ? { ...msg, content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.' }
+      console.error('Chat submission error:', error);
+      let errorMessage = 'An error occurred. Please try again.';
+      if (error instanceof Error) {
+        // Provide a more helpful error message for production-only issues
+        errorMessage = `An error occurred while fetching the AI's response. This can happen in production if the API key is missing or invalid.
+        
+Please verify your GROQ_API_KEY in your project's Vercel environment variables.
+
+**Original Error:** ${error.message}`;
+      }
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === aiMessageId
+            ? { ...msg, content: errorMessage, isError: true }
             : msg
         )
       );
     } finally {
       setIsLoading(false);
+      saveCurrentChat();
     }
   };
 
