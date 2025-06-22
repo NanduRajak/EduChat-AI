@@ -57,7 +57,9 @@ export default function Sidebar({
       {/* Backdrop Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 z-40 transition-opacity duration-300"
+          className={`fixed inset-0 bg-black/30 backdrop-blur-md z-40 transition-all duration-300 ${
+            isOpen ? 'opacity-100' : 'opacity-0'
+          }`}
           onClick={onClose}
           aria-hidden="true"
         />
@@ -65,16 +67,24 @@ export default function Sidebar({
 
       {/* Sidebar */}
       <div
-        className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] w-80 bg-white border-r border-gray-200 shadow-lg z-50 transform transition-all duration-300 ease-out flex flex-col ${
-          isOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
+        className={`fixed top-0 left-0 h-full w-80 bg-white/95 backdrop-blur-xl border-r border-gray-200 shadow-2xl z-50 transform transition-all duration-500 ease-out flex flex-col ${
+          isOpen ? 'translate-x-0 opacity-100 scale-100' : '-translate-x-full opacity-0 scale-95'
         }`}
         role="dialog"
         aria-modal="true"
         aria-label="Chat history sidebar"
       >
-        {/* Header */}
+        {/* Header with App Branding */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-          <h2 className="text-lg font-semibold text-gray-900">Chat History</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-rose-500 rounded-md flex items-center justify-center">
+              <span className="text-white text-xs font-semibold">AI</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium text-gray-900 text-sm leading-none">EduChat</span>
+              <span className="text-xs text-gray-500 leading-none">Chat History</span>
+            </div>
+          </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
