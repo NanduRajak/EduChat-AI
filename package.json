@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.2.19",
     "@ai-sdk/groq": "^1.2.9",
     "@pinecone-database/pinecone": "^6.1.1",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -35,6 +36,7 @@
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tavily": "^1.0.2",
     "zod": "^3.25.67"
   },
   "devDependencies": {

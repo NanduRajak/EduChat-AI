@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { streamText } from 'ai';
+import { streamText, tool } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
 import Groq from 'groq-sdk';
+import { TavilyClient } from 'tavily';
+import { z } from 'zod';
 
-// Initialize Groq clients
+// Initialize clients
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
@@ -12,156 +14,130 @@ const groqClient = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+const tavily = new TavilyClient({
+  apiKey: process.env.TAVILY_API_KEY,
+});
+
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
-    const { messages, hasImages } = await req.json();
+    const { messages, hasImages, useWebSearch } = await req.json();
     
-    // Check if GROQ_API_KEY exists
+    // API Key Checks
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'your_groq_api_key_here') {
       return NextResponse.json({
-        error: 'Please add your free Groq API key to .env.local file. Get it from: https://console.groq.com/keys'
+        error: 'Please add your free Groq API key to .env.local file.'
+      }, { status: 400 });
+    }
+    
+    if (useWebSearch && (!process.env.TAVILY_API_KEY || process.env.TAVILY_API_KEY === 'your_tavily_api_key_here')) {
+      return NextResponse.json({
+        error: 'Please add your Tavily API key to .env.local to use web search.'
       }, { status: 400 });
     }
 
-    const lastMessage = messages[messages.length - 1];
-    
-    // Handle image messages with raw Groq SDK
-    if (hasImages && lastMessage.images && lastMessage.images.length > 0) {
-      try {
-        const imageMessages = lastMessage.images.map((image: string) => ({
-          type: "image_url",
-          image_url: {
-            url: image // Should be in format: data:image/jpeg;base64,{base64}
-          }
-        }));
+    // Define the search tool using Tavily
+    const searchTool = tool({
+      description: 'Search for up-to-date information on the web. Use this for current events, facts, and any topic that requires real-time data.',
+      parameters: z.object({
+        query: z.string().describe('The search query to find information for.'),
+      }),
+      execute: async ({ query }) => {
+        try {
+          const searchResult = await tavily.search({ query, max_results: 5 });
+          return searchResult.results.map(result => ({
+            title: result.title,
+            url: result.url,
+            content: result.content,
+          }));
+        } catch (error) {
+          console.error('Tavily search failed:', error);
+          return { error: 'Search failed, please try again.' };
+        }
+      },
+    });
 
-        // Try different vision models in order of preference
-        const visionModels = [
-          "llama-3.2-11b-vision-preview",
-          "llama-3.1-8b-instant", // Fallback to text model if vision not available
-        ];
+    // Handle image messages (no web search for now)
+    if (hasImages) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.images && lastMessage.images.length > 0) {
+        try {
+          const imageMessages = lastMessage.images.map((image: string) => ({
+            type: "image_url",
+            image_url: {
+              url: image
+            }
+          }));
 
-        let completion = null;
-        let modelUsed = null;
+          const visionModels = [
+            "llama-3.2-11b-vision-preview",
+            "llama-3.1-8b-vision-preview",
+          ];
 
-        for (const model of visionModels) {
-          try {
-            if (model.includes('vision')) {
-              // Vision model
-              completion = await groqClient.chat.completions.create({
+          for (const model of visionModels) {
+            try {
+              const completion = await groqClient.chat.completions.create({
                 model: model,
                 messages: [
                   {
                     role: "system",
-                    content: "You are an educational AI assistant. Analyze images and help students understand concepts, solve problems, and learn effectively. Be clear, encouraging, and educational in your responses."
+                    content: "You are an educational AI assistant with vision capabilities. Analyze the provided image and help students understand concepts, solve problems, and learn effectively."
                   },
                   {
                     role: "user",
                     content: [
                       {
                         type: "text",
-                        text: lastMessage.content || "Please analyze this image and help me understand it."
+                        text: lastMessage.content || "Please analyze this image."
                       },
                       ...imageMessages
                     ]
                   }
                 ],
                 max_tokens: 1000,
-                temperature: 0.7,
               });
-            } else {
-              // Text model fallback
-              completion = await groqClient.chat.completions.create({
-                model: model,
-                messages: [
-                  {
-                    role: "system",
-                    content: "You are an educational AI assistant. The user has uploaded an image but I cannot analyze it directly. Please help them with their question in a helpful and educational way."
-                  },
-                  {
-                    role: "user",
-                    content: lastMessage.content || "I've uploaded an image but you can't see it. Can you help me with my question?"
-                  }
-                ],
-                max_tokens: 1000,
-                temperature: 0.7,
-              });
-            }
-            modelUsed = model;
-            break;
-          } catch (modelError) {
-            console.log(`Model ${model} failed:`, modelError instanceof Error ? modelError.message : 'Unknown error');
-            continue;
-          }
-        }
 
-        if (completion) {
+              if (completion.choices[0]?.message?.content) {
+                return NextResponse.json({
+                  content: completion.choices[0].message.content,
+                  finished: true
+                });
+              }
+            } catch (modelError) {
+              console.log(`Vision model ${model} failed, trying next...`);
+              continue;
+            }
+          }
+
+          throw new Error('All vision models failed.');
+
+        } catch (visionError) {
+          console.error('Image analysis failed:', visionError);
           return NextResponse.json({
-            content: completion.choices[0]?.message?.content || "I couldn't analyze the image. Please try again.",
+            content: "I see you've uploaded an image, but I'm currently unable to analyze it. Please describe the image, and I'll do my best to help!",
             finished: true
           });
-        } else {
-          throw new Error('No available models for image processing');
         }
-
-      } catch (visionError) {
-        console.error('Vision model error:', visionError);
-        // Fallback to text-only response when vision model is not available
-        return NextResponse.json({
-          content: "I see you've uploaded an image! While I can't analyze images directly right now, I'd be happy to help you with any questions you have. Please describe what you'd like to know, and I'll do my best to assist you with your learning.",
-          finished: true
-        });
       }
     }
 
-    // Handle text-only messages with Vercel AI SDK
+    // Handle text messages, with or without web search
     const result = await streamText({
       model: groq('llama-3.1-8b-instant'),
-      system: `You are a helpful educational AI assistant. Keep your responses simple, clear, and easy to read. 
-
-- Use plain text without markdown formatting
-- Avoid excessive asterisks, backticks, or special characters
-- Write in a conversational, friendly tone
-- Keep responses concise but informative
-- Use simple line breaks for readability
-
-Focus on being helpful and educational while keeping the format clean and simple.`,
-      messages: messages.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      maxTokens: 1000,
-      temperature: 0.7,
+      system: `You are a helpful educational AI assistant.
+- If the user provides search results, use them to answer the question.
+- If you don't know the answer and no search results are provided, say so.
+- Keep your responses simple, clear, and educational.`,
+      messages,
+      tools: useWebSearch ? { search: searchTool } : undefined,
     });
 
-    // Return streaming response properly
+    // Return streaming response
     return result.toDataStreamResponse();
     
   } catch (error) {
     console.error('Chat API error:', error);
-    
-    // Handle specific Groq API errors
-    if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        return NextResponse.json(
-          { error: 'Invalid Groq API key. Please check your .env.local file.' },
-          { status: 401 }
-        );
-      }
-      if (error.message.includes('quota') || error.message.includes('rate limit')) {
-        return NextResponse.json(
-          { error: 'Rate limit reached. Please try again in a moment.' },
-          { status: 429 }
-        );
-      }
-      if (error.message.includes('model')) {
-        return NextResponse.json(
-          { error: 'Model not available. Please try again.' },
-          { status: 400 }
-        );
-      }
-    }
-    
     return NextResponse.json(
       { error: `Failed to process request. Please try again.` },
       { status: 500 }

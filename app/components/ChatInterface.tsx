@@ -145,7 +145,7 @@ export default function ChatInterface() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Create AI message placeholder
+    // Create AI message placeholder - but don't add it to messages yet
     const aiMessageId = (Date.now() + 1).toString();
     const aiMessage: MessageType = {
       id: aiMessageId,
@@ -154,6 +154,7 @@ export default function ChatInterface() {
       timestamp: new Date(),
     };
 
+    // Add the AI message to show "Thinking..." but without bubble
     setMessages(prev => [...prev, aiMessage]);
 
     try {
@@ -197,14 +198,38 @@ export default function ChatInterface() {
                 const textContent = line.slice(2).replace(/"/g, '');
                 accumulatedContent += textContent;
                 
-                // Clean up the content - remove raw formatting characters
-                const cleanedContent = accumulatedContent
+                // Clean up the content with proper formatting
+                let cleanedContent = accumulatedContent
                   .replace(/\\n/g, '\n')  // Convert \n to actual newlines
-                  .replace(/\*\*/g, '')   // Remove markdown bold markers
-                  .replace(/\*/g, '')     // Remove single asterisks
                   .replace(/`/g, '')      // Remove backticks
                   .replace(/#{1,6}\s/g, '') // Remove markdown headers
+                  .replace(/\*\*\s*\*\*/g, '') // Remove "** **" patterns
+                  .replace(/\*\s*\*/g, '') // Remove "* *" patterns
                   .trim();                // Remove extra whitespace
+
+                // Enhanced formatting for points and paragraphs
+                cleanedContent = cleanedContent
+                  // Handle numbered lists (1., 2., 3., etc.)
+                  .replace(/(\d+\.\s*)/g, '\n$1')
+                  // Handle bullet points (•, -, *, etc.)
+                  .replace(/([•·\-*]\s*)/g, '\n$1')
+                  // Handle "Point" or "Step" followed by numbers
+                  .replace(/(Point|Step)\s*(\d+)/gi, '\n$1 $2')
+                  // Handle "First", "Second", "Third", etc.
+                  .replace(/(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)/gi, '\n$1')
+                  // Normalize multiple line breaks
+                  .replace(/\n\s*\n\s*\n/g, '\n\n')
+                  .replace(/\n\s*\n/g, '\n\n')
+                  // Ensure proper spacing after colons
+                  .replace(/:\s*(\d+\.)/g, ':\n\n$1')
+                  .replace(/:\s*([•·\-*])/g, ':\n\n$1')
+                  // Clean up any leading/trailing whitespace
+                  .trim();
+
+                // If content starts with a number or bullet, add a line break before it
+                if (/^(\d+\.|[•·\-*])/.test(cleanedContent)) {
+                  cleanedContent = '\n' + cleanedContent;
+                }
                 
                 setMessages(prev => 
                   prev.map(msg => 
@@ -426,126 +451,182 @@ export default function ChatInterface() {
             ) : (
               // Messages
               <div className="py-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`mb-4 flex items-end ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className="flex items-end mr-3 flex-shrink-0">
-                        {/* Enhanced Bot Icon SVG */}
-                        <div className={`relative w-10 h-10 rounded-full shadow-lg flex items-center justify-center border-2 ${
-                          isDarkMode 
-                            ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 border-gray-600 shadow-blue-500/20' 
-                            : 'bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 border-white shadow-lg'
-                        }`}>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="4" y="6" width="16" height="12" rx="2" fill="white" fillOpacity="0.95" />
-                            <circle cx="8" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
-                            <circle cx="16" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
-                            <rect x="10" y="13" width="4" height="2" rx="1" fill={isDarkMode ? '#1f2937' : '#374151'} />
-                            <path d="M8 4L10 6H14L16 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-                            {/* Glow effect for dark mode */}
-                            {isDarkMode && (
-                              <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1" />
+                {messages.map((message, idx) => {
+                  // Determine if this is the latest assistant message and AI is thinking
+                  const isLatestAssistantThinking =
+                    message.role === 'assistant' &&
+                    isLoading &&
+                    idx === messages.length - 1 &&
+                    !message.content;
+                  
+                  // For empty assistant messages, only show the icon with "Thinking..."
+                  if (message.role === 'assistant' && !message.content) {
+                    return (
+                      <div
+                        key={message.id}
+                        className="mb-4 flex items-end justify-start"
+                      >
+                        <div className="flex items-end mr-3 flex-shrink-0">
+                          {/* Enhanced Bot Icon SVG */}
+                          <div className={`relative w-10 h-10 rounded-full shadow-lg flex items-center justify-center border-2 ${
+                            isDarkMode 
+                              ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 border-gray-600 shadow-blue-500/20' 
+                              : 'bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 border-white shadow-lg'
+                          }`}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <rect x="4" y="6" width="16" height="12" rx="2" fill="white" fillOpacity="0.95" />
+                              <circle cx="8" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                              <circle cx="16" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                              <rect x="10" y="13" width="4" height="2" rx="1" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                              <path d="M8 4L10 6H14L16 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                              {/* Glow effect for dark mode */}
+                              {isDarkMode && (
+                                <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1" />
+                              )}
+                            </svg>
+                            {/* Thinking label with animated spinner */}
+                            {isLatestAssistantThinking && (
+                              <div className={`absolute -right-2 top-1/2 -translate-y-1/2 ml-2 px-3 py-1 rounded-full text-xs font-semibold shadow flex items-center gap-2 ${
+                                isDarkMode ? 'bg-gray-800 text-rose-300 border border-rose-400/30' : 'bg-white text-rose-600 border border-rose-200'
+                              }`} style={{ whiteSpace: 'nowrap', left: '110%' }}>
+                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                <span>Thinking...</span>
+                              </div>
                             )}
-                          </svg>
+                          </div>
                         </div>
                       </div>
-                    )}
+                    );
+                  }
+                  
+                  return (
                     <div
-                      className={`rounded-2xl px-4 py-3 max-w-[75%] shadow-md break-words relative group ${
-                        message.role === 'user'
-                          ? isDarkMode
-                            ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-rose-500/20'
-                            : 'bg-gradient-to-r from-rose-100 to-rose-50 text-rose-900 shadow-lg'
-                          : isDarkMode
-                            ? 'bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-gray-500/20'
-                            : 'bg-gradient-to-r from-gray-100 to-gray-50 text-gray-900 shadow-lg'
-                      }`}
+                      key={message.id}
+                      className={`mb-4 flex items-end ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      {message.content}
-                      
-                      {/* Copy Icon for AI responses */}
                       {message.role === 'assistant' && (
-                        <button
-                          onClick={(event) => {
-                            navigator.clipboard.writeText(message.content);
-                            setCopiedMessageId(message.id);
-                            setTimeout(() => {
-                              setCopiedMessageId(null);
-                            }, 1000);
-                          }}
-                          className={`absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-110 ${
-                            copiedMessageId === message.id
-                              ? isDarkMode
-                                ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/30'
-                                : 'bg-rose-500 text-white shadow-lg shadow-rose-500/40'
-                              : isDarkMode
-                                ? 'bg-white hover:bg-gray-100 text-gray-600 shadow-lg'
-                                : 'bg-white hover:bg-gray-50 text-gray-600 shadow-lg'
-                          }`}
-                          title="Copy message"
-                        >
-                          <svg 
-                            width="16" 
-                            height="16" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="transition-transform duration-200"
+                        <div className="flex items-end mr-3 flex-shrink-0">
+                          {/* Enhanced Bot Icon SVG */}
+                          <div className={`relative w-10 h-10 rounded-full shadow-lg flex items-center justify-center border-2 ${
+                            isDarkMode 
+                              ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 border-gray-600 shadow-blue-500/20' 
+                              : 'bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 border-white shadow-lg'
+                          }`}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <rect x="4" y="6" width="16" height="12" rx="2" fill="white" fillOpacity="0.95" />
+                              <circle cx="8" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                              <circle cx="16" cy="10" r="1.2" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                              <rect x="10" y="13" width="4" height="2" rx="1" fill={isDarkMode ? '#1f2937' : '#374151'} />
+                              <path d="M8 4L10 6H14L16 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                              {/* Glow effect for dark mode */}
+                              {isDarkMode && (
+                                <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1" />
+                              )}
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                      <div
+                        className={`rounded-2xl px-4 py-3 max-w-[75%] shadow-md break-words relative group ${
+                          message.role === 'user'
+                            ? isDarkMode
+                              ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-rose-500/20'
+                              : 'bg-gradient-to-r from-rose-100 to-rose-50 text-rose-900 shadow-lg'
+                            : isDarkMode
+                              ? 'bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-gray-500/20'
+                              : 'bg-gradient-to-r from-gray-100 to-gray-50 text-gray-900 shadow-lg'
+                        }`}
+                      >
+                        {/* Display images if they exist */}
+                        {message.images && message.images.length > 0 && (
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            {message.images.map((image, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={image}
+                                  alt={`Uploaded image ${index + 1}`}
+                                  className="max-w-full h-auto rounded-lg border-2 border-white/20 shadow-md"
+                                  style={{ maxHeight: '200px', maxWidth: '300px' }}
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-all duration-200 flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {message.content}
+                        
+                        {/* Copy Icon for AI responses */}
+                        {message.role === 'assistant' && (
+                          <button
+                            onClick={(event) => {
+                              navigator.clipboard.writeText(message.content);
+                              setCopiedMessageId(message.id);
+                              setTimeout(() => {
+                                setCopiedMessageId(null);
+                              }, 1000);
+                            }}
+                            className={`absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 hover:scale-110 ${
+                              copiedMessageId === message.id
+                                ? isDarkMode
+                                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/30'
+                                  : 'bg-rose-500 text-white shadow-lg shadow-rose-500/40'
+                                : isDarkMode
+                                  ? 'bg-white hover:bg-gray-100 text-gray-600 shadow-lg'
+                                  : 'bg-white hover:bg-gray-50 text-gray-600 shadow-lg'
+                            }`}
+                            title="Copy message"
                           >
-                            <path 
-                              d="M8 4V2C8 1.44772 8.44772 1 9 1H19C19.5523 1 20 1.44772 20 2V16C20 16.5523 19.5523 17 19 17H17V20C17 20.5523 16.5523 21 16 21H4C3.44772 21 3 20.5523 3 20V6C3 5.44772 3.44772 5 4 5H8V4Z" 
-                              stroke="currentColor" 
-                              strokeWidth="2" 
-                              strokeLinecap="round" 
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
+                            <svg 
+                              width="16" 
+                              height="16" 
+                              viewBox="0 0 24 24" 
+                              fill="none" 
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="transition-transform duration-200"
+                            >
+                              <path 
+                                d="M8 4V2C8 1.44772 8.44772 1 9 1H19C19.5523 1 20 1.44772 20 2V16C20 16.5523 19.5523 17 19 17H17V20C17 20.5523 16.5523 21 16 21H4C3.44772 21 3 20.5523 3 20V6C3 5.44772 3.44772 5 4 5H8V4Z" 
+                                stroke="currentColor" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      {message.role === 'user' && (
+                        <div className="flex items-end ml-3 flex-shrink-0">
+                          {/* Enhanced Premium User Icon SVG */}
+                          <div className="relative w-10 h-10 rounded-full shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-yellow-400 shadow-lg"></div>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10">
+                              <circle cx="12" cy="12" r="10" fill="url(#userGradient)" />
+                              <ellipse cx="12" cy="10.5" rx="4" ry="4.5" fill="#fff" fillOpacity="0.95" />
+                              <ellipse cx="12" cy="18" rx="6.5" ry="3.5" fill="#fff" fillOpacity="0.6" />
+                              {/* Enhanced glow effect */}
+                              <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(244, 63, 94, 0.3)" strokeWidth="1" />
+                              <defs>
+                                <linearGradient id="userGradient" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                                  <stop stopColor="#f43f5e" />
+                                  <stop offset="0.5" stopColor="#ec4899" />
+                                  <stop offset="1" stopColor="#fbbf24" />
+                                </linearGradient>
+                              </defs>
+                            </svg>
+                          </div>
+                        </div>
                       )}
                     </div>
-                    {message.role === 'user' && (
-                      <div className="flex items-end ml-3 flex-shrink-0">
-                        {/* Enhanced Premium User Icon SVG */}
-                        <div className="relative w-10 h-10 rounded-full shadow-lg flex items-center justify-center border-2 border-white dark:border-gray-800">
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-yellow-400 shadow-lg"></div>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10">
-                            <circle cx="12" cy="12" r="10" fill="url(#userGradient)" />
-                            <ellipse cx="12" cy="10.5" rx="4" ry="4.5" fill="#fff" fillOpacity="0.95" />
-                            <ellipse cx="12" cy="18" rx="6.5" ry="3.5" fill="#fff" fillOpacity="0.6" />
-                            {/* Enhanced glow effect */}
-                            <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(244, 63, 94, 0.3)" strokeWidth="1" />
-                            <defs>
-                              <linearGradient id="userGradient" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-                                <stop stopColor="#f43f5e" />
-                                <stop offset="0.5" stopColor="#ec4899" />
-                                <stop offset="1" stopColor="#fbbf24" />
-                              </linearGradient>
-                            </defs>
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className={`flex items-start gap-3 px-4 py-6 transition-colors ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50/50'}`}>
-                    <div className="w-8 h-8 bg-gradient-to-br from-rose-500 to-rose-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex items-center gap-1 pt-2">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                        <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
             )}
