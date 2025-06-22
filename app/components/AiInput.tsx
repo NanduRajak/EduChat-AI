@@ -8,9 +8,10 @@ interface AiInputProps {
   onSubmit: (message: string, images?: string[]) => void;
   isLoading?: boolean;
   placeholder?: string;
+  isDarkMode?: boolean;
 }
 
-export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me anything..." }: AiInputProps) {
+export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me anything...", isDarkMode = false }: AiInputProps) {
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -66,7 +67,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
   }, [handleSubmit]);
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm">
+    <div className={`backdrop-blur-sm transition-colors duration-300 ${isDarkMode ? 'bg-gray-800/80' : 'bg-white/80'}`}>
       <div className="max-w-4xl mx-auto p-4">
         {/* Image Preview */}
         {images.length > 0 && (
@@ -93,9 +94,11 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
         <form onSubmit={handleSubmit} className="relative">
           <div
             className={cn(
-              "relative border border-gray-200 rounded-xl bg-white shadow-sm transition-all",
-              isDragging && "border-rose-400 bg-rose-50",
-              "hover:border-gray-300 focus-within:border-gray-400 focus-within:shadow-md"
+              "relative border rounded-xl shadow-sm transition-all",
+              isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-200 bg-white",
+              isDragging && "border-rose-400",
+              isDragging && (isDarkMode ? "bg-rose-900/20" : "bg-rose-50"),
+              isDarkMode ? "hover:border-gray-500 focus-within:border-rose-400 focus-within:shadow-md" : "hover:border-gray-300 focus-within:border-gray-400 focus-within:shadow-md"
             )}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -108,7 +111,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               disabled={isLoading}
-              className="w-full min-h-[52px] max-h-32 px-4 py-3 pr-24 text-sm bg-transparent border-none outline-none resize-none placeholder:text-gray-500"
+              className={`w-full min-h-[52px] max-h-32 px-4 py-3 pr-24 text-sm bg-transparent border-none outline-none resize-none transition-colors ${isDarkMode ? 'text-gray-100 placeholder:text-gray-400' : 'text-gray-900 placeholder:text-gray-500'}`}
               rows={1}
               style={{
                 height: 'auto',
@@ -157,17 +160,17 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
 
             {/* Drag Overlay */}
             {isDragging && (
-              <div className="absolute inset-0 bg-rose-50/90 border-2 border-dashed border-rose-400 rounded-xl flex items-center justify-center">
+              <div className={`absolute inset-0 border-2 border-dashed border-rose-400 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-rose-900/30' : 'bg-rose-50/90'}`}>
                 <div className="text-center">
                   <Upload className="w-8 h-8 text-rose-500 mx-auto mb-2" />
-                  <p className="text-sm text-rose-700">Drop images here</p>
+                  <p className={`text-sm ${isDarkMode ? 'text-rose-400' : 'text-rose-700'}`}>Drop images here</p>
                 </div>
               </div>
             )}
           </div>
         </form>
 
-        <p className="text-xs text-gray-500 mt-2 text-center">
+        <p className={`text-xs mt-2 text-center transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           Press ⌘+Enter to send • Supports images up to 10MB
         </p>
       </div>
