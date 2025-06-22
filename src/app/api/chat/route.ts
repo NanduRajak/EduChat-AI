@@ -21,20 +21,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    try {
-      await groqClient.models.list();
-    } catch (error) {
-      console.error('Groq API key validation failed:', error);
-      if (error instanceof Groq.APIError && error.status === 401) {
-          return NextResponse.json({
-          error: 'Your Groq API key is invalid or has been revoked. Please check your key in the Vercel project settings and ensure it has the correct permissions.'
-        }, { status: 401 });
-      }
-      return NextResponse.json({
-        error: 'Could not connect to the AI service. Please try again later.'
-      }, { status: 500 });
-    }
-
     const lastMessage = messages[messages.length - 1];
     
     let webSearchResults = [];
@@ -59,7 +45,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Handle image messages with raw Groq SDK
     if (hasImages && lastMessage.images && lastMessage.images.length > 0) {
       try {
         const imageMessages = lastMessage.images.map((image: string) => ({

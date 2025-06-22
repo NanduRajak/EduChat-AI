@@ -315,9 +315,9 @@ Please verify your GROQ_API_KEY in your project's Vercel environment variables.
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative">
         {/* Header */}
-        <header className={`h-14 border-b backdrop-blur-sm flex items-center px-4 transition-colors duration-300 ${isDarkMode ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-white/80'}`}>
+        <header className={`h-14 border-b backdrop-blur-sm flex items-center px-4 transition-colors duration-300 w-full z-20 ${isDarkMode ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-white/80'} fixed top-0 left-0 right-0`} style={{maxWidth: '100vw'}}>
           <div className="flex items-center justify-between w-full">
             {/* Left - Sidebar Toggle & Brand */}
             <div className="flex items-center gap-3">
@@ -374,7 +374,7 @@ Please verify your GROQ_API_KEY in your project's Vercel environment variables.
         </header>
 
         {/* Messages Area */}
-        <div className={`flex-1 overflow-y-auto transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        <div className={`flex-1 w-full transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} pt-14 pb-[92px] overflow-y-auto`} style={{height: '100vh', maxHeight: '100vh'}}>
           <div className="max-w-4xl mx-auto">
             {messages.length === 0 ? (
               // Empty State
@@ -655,12 +655,14 @@ Please verify your GROQ_API_KEY in your project's Vercel environment variables.
         </div>
 
         {/* Input Area */}
-        <AiInput
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
-          placeholder="Ask me anything about your studies..."
-          isDarkMode={isDarkMode}
-        />
+        <div className="fixed bottom-0 left-0 right-0 w-full z-20" style={{maxWidth: '100vw'}}>
+          <AiInput
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+            placeholder="Ask me anything about your studies..."
+            isDarkMode={isDarkMode}
+          />
+        </div>
       </div>
     </div>
   );
