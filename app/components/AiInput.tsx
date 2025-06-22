@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Send, Image, X, Upload } from 'lucide-react';
+import { Send, Paperclip, X, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface AiInputProps {
@@ -66,7 +66,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
   }, [handleSubmit]);
 
   return (
-    <div className="border-t bg-white/80 backdrop-blur-sm">
+    <div className="bg-white/80 backdrop-blur-sm">
       <div className="max-w-4xl mx-auto p-4">
         {/* Image Preview */}
         {images.length > 0 && (
@@ -138,7 +138,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                 disabled={isLoading}
                 className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50"
               >
-                <Image className="w-4 h-4" />
+                <Paperclip className="w-4 h-4" />
               </button>
 
               <button
