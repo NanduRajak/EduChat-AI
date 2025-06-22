@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ArrowUp, Paperclip, X, Upload, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -67,35 +67,23 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
     }
   }, [handleSubmit]);
 
+  useEffect(() => {
+    if (images.length === 0 && input === '') {
+      if (textareaRef.current) {
+        textareaRef.current.style.marginTop = '0px';
+        textareaRef.current.style.minHeight = '56px';
+      }
+    }
+  }, [images.length, input]);
+
   return (
     <div className={`backdrop-blur-sm transition-colors duration-300 ${isDarkMode ? 'bg-gray-800/80' : 'bg-white/80'}`}>
       <div className="max-w-4xl mx-auto p-4">
-        {/* Image Preview */}
-        {images.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {images.map((image, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={image}
-                  alt={`Upload ${index + 1}`}
-                  className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                />
-                <button
-                  onClick={() => removeImage(index)}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-gray-900 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Input Area */}
         <form onSubmit={handleSubmit} className="relative">
           <div
             className={cn(
-              "relative border rounded-xl shadow-sm transition-all",
+              "relative border rounded-xl shadow-sm transition-all min-h-[72px] md:min-h-[84px]",
               isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-200 bg-white",
               isDragging && "border-rose-400",
               isDragging && (isDarkMode ? "bg-rose-900/20" : "bg-rose-50"),
@@ -104,29 +92,60 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
+            style={{ paddingTop: images.length > 0 ? 64 : 0 }}
           >
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              disabled={isLoading}
-              className={`w-full min-h-[52px] max-h-32 px-4 py-3 pr-32 text-sm bg-transparent border-none outline-none resize-none transition-colors ${isDarkMode ? 'text-gray-100 placeholder:text-gray-400' : 'text-gray-900 placeholder:text-gray-500'}`}
-              rows={1}
-              style={{
-                height: 'auto',
-                minHeight: '52px'
-              }}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                target.style.height = Math.min(target.scrollHeight, 128) + 'px';
-              }}
-            />
+            {/* Image Preview absolutely positioned in top-right of input area */}
+            {images.length > 0 && (
+              <div className="absolute top-3 right-4 flex gap-2 z-20">
+                {images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={image}
+                      alt={`Upload ${index + 1}`}
+                      className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-md"
+                      style={{ maxWidth: '64px', maxHeight: '64px' }}
+                    />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-gray-900 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                      style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center h-full w-full">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder}
+                disabled={isLoading}
+                className={`w-full min-h-[56px] md:min-h-[68px] max-h-40 px-4 py-0 pr-36 text-base bg-transparent border-none outline-none resize-none transition-colors flex items-center ${isDarkMode ? 'text-gray-100 placeholder:text-gray-400' : 'text-gray-900 placeholder:text-gray-500'} placeholder:leading-[1.5] placeholder:text-lg`}
+                rows={1}
+                style={{
+                  height: 'auto',
+                  minHeight: images.length > 0 ? '68px' : '56px',
+                  marginTop: images.length > 0 ? 8 : 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  paddingTop: 0,
+                  paddingBottom: 0
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = Math.min(target.scrollHeight, 160) + 'px';
+                }}
+              />
+            </div>
 
             {/* Action Buttons */}
-            <div className="absolute right-2 bottom-2 flex items-center gap-1">
+            <div className="absolute right-4 bottom-3 flex items-center gap-2 md:gap-3">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -135,7 +154,6 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                 onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
                 className="hidden"
               />
-              
               {/* Web Search Toggle */}
               <button
                 type="button"
@@ -153,7 +171,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
               >
                 <div className="relative">
                   <Globe className={cn(
-                    "w-4 h-4 transition-all duration-300",
+                    "w-5 h-5 transition-all duration-300",
                     webSearchEnabled && "animate-pulse"
                   )} />
                   {webSearchEnabled && (
@@ -164,7 +182,6 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                     </>
                   )}
                 </div>
-                
                 {/* Tooltip */}
                 <div className={cn(
                   "absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs rounded-lg shadow-lg transition-all duration-200 pointer-events-none whitespace-nowrap z-10",
@@ -180,7 +197,6 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                   )} />
                 </div>
               </button>
-              
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -192,9 +208,8 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                     : "text-rose-500 hover:text-rose-700 hover:bg-rose-50"
                 )}
               >
-                <Paperclip className="w-4 h-4" />
+                <Paperclip className="w-5 h-5" />
               </button>
-
               <button
                 type="submit"
                 disabled={isLoading || (!input.trim() && images.length === 0)}
@@ -212,7 +227,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
               >
-                <ArrowUp className="w-4 h-4" />
+                <ArrowUp className="w-5 h-5" />
               </button>
             </div>
 

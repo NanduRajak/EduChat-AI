@@ -6,6 +6,7 @@ import { Message as MessageType, ChatSession } from '../types';
 import AiInput from './AiInput';
 import Message from './Message';
 import Sidebar from './Sidebar';
+import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<MessageType[]>([]);
@@ -16,6 +17,8 @@ export default function ChatInterface() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatAreaRef = useRef<HTMLDivElement>(null);
+  const [showScrollArrows, setShowScrollArrows] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -300,6 +303,31 @@ Please verify your GROQ_API_KEY in your project's Vercel environment variables.
     }
   }, [messages, currentChatId]);
 
+  // Check if chat area is overflowing
+  useEffect(() => {
+    const handleResizeOrScroll = () => {
+      const el = chatAreaRef.current;
+      if (!el) return;
+      setShowScrollArrows(el.scrollHeight > el.clientHeight + 10);
+    };
+    handleResizeOrScroll();
+    window.addEventListener('resize', handleResizeOrScroll);
+    return () => window.removeEventListener('resize', handleResizeOrScroll);
+  }, [messages]);
+
+  // Hide scrollbar utility
+  const hideScrollbar = isDarkMode
+    ? 'scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent'
+    : 'scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent';
+
+  // Scroll handlers
+  const scrollToTop = () => {
+    chatAreaRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const scrollToBottomBtn = () => {
+    chatAreaRef.current?.scrollTo({ top: chatAreaRef.current.scrollHeight, behavior: 'smooth' });
+  };
+
   return (
     <div className={`flex flex-col h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Sidebar */}
@@ -374,7 +402,11 @@ Please verify your GROQ_API_KEY in your project's Vercel environment variables.
         </header>
 
         {/* Messages Area */}
-        <div className={`flex-1 w-full transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} pt-14 pb-[92px] overflow-y-auto`} style={{height: '100vh', maxHeight: '100vh'}}>
+        <div
+          ref={chatAreaRef}
+          className={`flex-1 w-full transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-white'} pt-14 pb-[92px] overflow-y-auto ${hideScrollbar}`}
+          style={{height: '100vh', maxHeight: '100vh', position: 'relative'}}
+        >
           <div className="max-w-4xl mx-auto">
             {messages.length === 0 ? (
               // Empty State
@@ -471,7 +503,7 @@ Please verify your GROQ_API_KEY in your project's Vercel environment variables.
               </div>
             ) : (
               // Messages
-              <div className="py-4">
+              <div className="py-4 relative">
                 {messages.map((message, idx) => {
                   // Determine if this is the latest assistant message and AI is thinking
                   const isLatestAssistantThinking =
@@ -649,6 +681,25 @@ Please verify your GROQ_API_KEY in your project's Vercel environment variables.
                   );
                 })}
                 <div ref={messagesEndRef} />
+                {/* Up/Down Arrows */}
+                {showScrollArrows && (
+                  <div className="flex flex-col gap-3 items-center fixed right-6 z-30 top-1/2 -translate-y-1/2">
+                    <button
+                      onClick={scrollToTop}
+                      className={`shadow-lg rounded-full p-1.5 border-2 transition-all duration-300 ${isDarkMode ? 'bg-gray-800 border-rose-500 hover:bg-rose-600' : 'bg-white border-rose-400 hover:bg-rose-100'} group`}
+                      aria-label="Scroll to top"
+                    >
+                      <ArrowUpCircle className={`w-8 h-8 ${isDarkMode ? 'text-rose-400 group-hover:text-white' : 'text-rose-500 group-hover:text-rose-600'}`} />
+                    </button>
+                    <button
+                      onClick={scrollToBottomBtn}
+                      className={`shadow-lg rounded-full p-1.5 border-2 transition-all duration-300 ${isDarkMode ? 'bg-gray-800 border-rose-500 hover:bg-rose-600' : 'bg-white border-rose-400 hover:bg-rose-100'} group`}
+                      aria-label="Scroll to bottom"
+                    >
+                      <ArrowDownCircle className={`w-8 h-8 ${isDarkMode ? 'text-rose-400 group-hover:text-white' : 'text-rose-500 group-hover:text-rose-600'}`} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
