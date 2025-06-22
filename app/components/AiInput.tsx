@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Send, Paperclip, X, Upload } from 'lucide-react';
+import { ArrowUp, Paperclip, X, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface AiInputProps {
@@ -68,7 +68,7 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
 
   return (
     <div className={`backdrop-blur-sm transition-colors duration-300 ${isDarkMode ? 'bg-gray-800/80' : 'bg-white/80'}`}>
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-5xl mx-auto px-6 py-5">
         {/* Image Preview */}
         {images.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">
@@ -94,11 +94,11 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
         <form onSubmit={handleSubmit} className="relative">
           <div
             className={cn(
-              "relative border rounded-xl shadow-sm transition-all",
-              isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-200 bg-white",
+              "relative border rounded-2xl shadow-lg transition-all",
+              isDarkMode ? "border-gray-600 bg-gray-700/90" : "border-gray-200 bg-white/90",
               isDragging && "border-rose-400",
               isDragging && (isDarkMode ? "bg-rose-900/20" : "bg-rose-50"),
-              isDarkMode ? "hover:border-gray-500 focus-within:border-rose-400 focus-within:shadow-md" : "hover:border-gray-300 focus-within:border-gray-400 focus-within:shadow-md"
+              isDarkMode ? "hover:border-gray-500 focus-within:border-rose-400 focus-within:shadow-xl" : "hover:border-gray-300 focus-within:border-rose-300 focus-within:shadow-xl"
             )}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -111,21 +111,21 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               disabled={isLoading}
-              className={`w-full min-h-[52px] max-h-32 px-4 py-3 pr-24 text-sm bg-transparent border-none outline-none resize-none transition-colors ${isDarkMode ? 'text-gray-100 placeholder:text-gray-400' : 'text-gray-900 placeholder:text-gray-500'}`}
+              className={`w-full min-h-[60px] max-h-36 px-5 py-4 pr-28 text-sm bg-transparent border-none outline-none resize-none transition-colors leading-relaxed ${isDarkMode ? 'text-gray-100 placeholder:text-gray-400' : 'text-gray-900 placeholder:text-gray-500'}`}
               rows={1}
               style={{
                 height: 'auto',
-                minHeight: '52px'
+                minHeight: '60px'
               }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
-                target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+                target.style.height = Math.min(target.scrollHeight, 144) + 'px';
               }}
             />
 
             {/* Action Buttons */}
-            <div className="absolute right-2 bottom-2 flex items-center gap-1">
+            <div className="absolute right-3 bottom-3 flex items-center gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -139,23 +139,20 @@ export default function AiInput({ onSubmit, isLoading, placeholder = "Ask me any
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
-                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50"
+                className={`w-8 h-8 rounded-full transition-all flex items-center justify-center disabled:opacity-50 ${isDarkMode ? 'text-rose-400 hover:bg-gray-600' : 'text-rose-500 hover:bg-rose-50'}`}
               >
                 <Paperclip className="w-4 h-4" />
               </button>
 
-              <button
-                type="submit"
-                disabled={isLoading || (!input.trim() && images.length === 0)}
-                className={cn(
-                  "p-2 rounded-lg transition-all",
-                  (input.trim() || images.length > 0) && !isLoading
-                    ? "bg-rose-500 text-white hover:bg-rose-600"
-                    : "text-gray-400 cursor-not-allowed"
-                )}
-              >
-                <Send className="w-4 h-4" />
-              </button>
+              {(input.trim() || images.length > 0) && (
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-8 h-8 rounded-full bg-rose-500 text-white hover:bg-rose-600 shadow-md hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center animate-in fade-in duration-200"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Drag Overlay */}
